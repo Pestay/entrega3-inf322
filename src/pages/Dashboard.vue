@@ -1,6 +1,7 @@
 <template>
+
   <div>
-    <card style="height: 100%; width: 60%; margin-left: auto;
+    <card style="width: 60%; margin-left: auto;
     margin-right: auto;">
     <div class="row">
       <div class="col-12">
@@ -37,7 +38,7 @@
                       <v-chip class="ma-2"
                               outlined
                       >
-                        <i v-if="info_bebe[getBabyId-1].estado == 'medio'" class="tim-icons icon-alert-circle-exc"></i>
+                        <i color="success" v-if="info_bebe[getBabyId-1].estado == 'medio'" class="tim-icons icon-alert-circle-exc"></i>
                         <i v-else-if="info_bebe[getBabyId-1].estado == 'ok'" class="tim-icons icon-check-2"></i>
                         <i v-else class="tim-icons icon-user-run"></i>
                       </v-chip>                  
@@ -97,9 +98,82 @@
                     </v-list-item-title>  
                   </v-list-item-content>
                 </v-list-item>
+                <v-list-item v-if="getTipoUser===2">
+
+                  <v-btn block @click="update=true" color="primary">Actualizar datos</v-btn>
+                  
+                </v-list-item>
               </v-list>
           </v-card>
         </v-card-text>
+      <v-dialog
+        v-model="update"
+        max-width="600"
+      >
+          <v-card>
+              <v-card-title>
+                  Actualizar Datos
+              </v-card-title>
+              <v-form ref="form" style="padding-left:20px;padding-right:20px;padding-bottom:20px"
+              >
+                <v-text-field 
+                v-model="temp_data.tamaño"
+                outlined
+                label="Tamaño"
+                :placeholder="info_bebe[getBabyId-1].tamaño.toString()"
+                :rules="sizeRules"
+                ></v-text-field>
+                <v-text-field 
+                v-model="temp_data.peso"
+                outlined
+                label="Peso"
+                :placeholder="info_bebe[getBabyId-1].peso.toString()"
+                :rules="weightRules"
+                ></v-text-field>
+               <v-select
+                  v-model="temp_data.estado"
+                  :items="items"
+                  :rules="[v => !!v || 'Se requiere un estado']"
+                  label="Estado"
+                  required
+                  outlined
+                ></v-select>
+                <v-btn @click="validate" block color=primary >Guardar cambios</v-btn>
+              </v-form>
+          </v-card>
+      <v-dialog
+        v-model="confirm"
+        max-width="600"
+      >
+        <v-card>
+          <v-card-title>
+            Confirmar
+          </v-card-title>
+          <v-card-text>
+            ¿Desea guardar los cambios?
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+                <v-btn @click="actualizarDatos(temp_data)" color=primary text>OK</v-btn>
+                
+                <v-btn @click="confirm=false;update=false;" text>Cancelar</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+      <v-dialog
+        v-model="notice"
+        max-width="600"
+      >
+        <v-card>
+          <v-card-title>
+            ¡Éxito!
+          </v-card-title>
+          <v-card-text>
+            Sus cambios han sido aplicados con éxito
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+      </v-dialog>  
       </v-card>
         <card type="chart" >
           <template slot="header">
@@ -141,14 +215,24 @@
             </line-chart>
           </div>
         </card>
-        <v-btn block>
-          Lista Exámenes
-        </v-btn>
+        <div style="padding-bottom:20px;padding-top:20px;padding-left:20px;padding-right:20px">
+        <v-row>
+          <v-btn block v-on:click="gotosite()">
+            Lista Exámenes
+          </v-btn>
+        </v-row>
+        <v-divider></v-divider>
+        <v-row>
+          <v-btn v-if="getTipoUser===2" block v-on:click="goToAddExam">
+            Añadir Exámenes
+          </v-btn>
+        </v-row>
+        </div>
+
       </div>
     </div>
     </card>
   </div>
-
 </template>
 <script>
   import LineChart from '@/components/Charts/LineChart';
@@ -159,16 +243,38 @@
   import config from '@/config';
   import store from '../store'
   import Card from '../components/Cards/Card.vue';
+  import router from '../router';
 
   export default {
     components: {
       LineChart,
       BarChart,
       TaskList,
-      UserTable
+      UserTable,
     },
     data() {
       return {
+        weightRules: [
+            v => !!v || 'Campo no puede ser vacío',
+            v => !isNaN(v) || 'Tiene que ser un número',
+        ],
+        sizeRules: [
+            v => !!v || 'Campo no puede ser vacío',
+            v => !isNaN(v) || 'Tiene que ser un número',
+        ],
+        items : [
+          'ok',
+          'medio',
+          'mal'
+        ],
+        update: false,
+        confirm: false,
+        notice: false,
+        temp_data: {
+          estado: '',
+          tamaño: '',
+          peso: '',
+        },
         info_bebe: [
           {
             id: 1,
@@ -287,9 +393,33 @@
       },
       bigLineChartCategories() {
         return [(0,'Peso'),(1,'Altura')];
+      },
+      getTipoUsuario() {
+        return this.$store.state.tipo_usuario
+      },
+      getIdUser() {
+        return this.$store.state.id_usuario
+      },
+      getTipoUser() {
+        return this.$store.state.tipo_usuario
       }
     },
     methods: {
+      validate() 
+      {
+          if(this.$refs.form.validate())
+          {
+              this.confirm = true
+          }
+      },
+      actualizarDatos(datos) {
+        this.info_bebe[this.$store.state.id_bebe-1].peso = datos.peso
+        this.info_bebe[this.$store.state.id_bebe-1].tamaño = datos.tamaño
+        this.info_bebe[this.$store.state.id_bebe-1].estado = datos.estado
+        this.update = false
+        this.confirm = false
+        this.notice = true
+      },
       initBigChart(index) {
         let chartData = {
           datasets: [{
@@ -333,7 +463,17 @@
         this.$refs.bigChart.updateGradients(chartData);
         this.bigLineChart.chartData = chartData;
         this.bigLineChart.activeIndex = index;
-      }
+      },
+      goToAddExam() {
+        router.push({
+              path: "/info/add",
+        })
+      },
+      gotosite(){
+          router.push({
+            path:"/exams",
+          })
+        },
     },
     mounted() {
       this.i18n = this.$i18n;
@@ -342,13 +482,16 @@
         this.$rtl.enableRTL();
       }
       this.initBigChart(0);
+      this.temp_data.peso = this.info_bebe[this.getBabyId-1].peso
+      this.temp_data.tamaño = this.info_bebe[this.getBabyId-1].tamaño
+      this.temp_data.estado = this.info_bebe[this.getBabyId-1].estado
     },
     beforeDestroy() {
       if (this.$rtl.isRTL) {
         this.i18n.locale = 'en';
         this.$rtl.disableRTL();
       }
-    }
+    },
   };
 </script>
 <style>

@@ -1,12 +1,21 @@
 <template>
-  <div>
-    <notifications></notifications>
-    <router-view :key="$route.fullPath"></router-view>
-  </div>
+  <v-app style="background-color:#05445E;">
+    <div>
+      <Navbar/>
+      <notifications></notifications>
+      <router-view :key="$route.fullPath"></router-view>
+    </div>
+  </v-app>
 </template>
 
 <script>
+import Navbar from './components/Navbar.vue'
+
   export default {
+    components:
+    {
+      Navbar
+    },
     methods: {
       disableRTL() {
         if (!this.$rtl.isRTL) {
